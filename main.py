@@ -28,7 +28,7 @@ class WinTileStartEditor:
 
         self.sidebar_frame = CTkFrame(self.root, width=220, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(8, weight=1)
+        self.sidebar_frame.grid_rowconfigure(10, weight=1)
 
         self.logo_label = CTkLabel(self.sidebar_frame, text="WinTileStartEditor",
                                                  font=CTkFont("<Biennale>", size=20, weight="bold"))
@@ -66,8 +66,17 @@ class WinTileStartEditor:
         self.size_text_slider.set(150)
         self.size_text_slider.grid(row=7, column=0, padx=20, pady=5)
 
+        self.double_text_var = IntVar(value=0)
+        self.double_text_check = CTkCheckBox(self.sidebar_frame, text="Double text", command=self.double_text_changed,
+                               variable=self.double_text_var, onvalue=60, offvalue=0, checkbox_width = 20, checkbox_height = 20)
+        self.double_text_check.grid(row=8, column=0, padx=10, pady=5)
+
+
         self.image_label = CTkLabel(self.root, image=self.image, text="")
         self.image_label.grid(row=0, column=1, rowspan=4, sticky="nsew")
+
+    def double_text_changed(self):
+        self.display_image()
 
     def text_changed(self, event):
         self.display_image()
@@ -116,7 +125,7 @@ class WinTileStartEditor:
                 draw = ImageDraw.Draw(rounded_image_with_text)
                 text = str(self.textbox.get("1.0", "end-1c"))
 
-                draw.text((60, height - size_text - 60), text,
+                draw.text((60, height - size_text - self.double_text_var.get() - 60), text,
                           font=ImageFont.truetype("resources/fonts/BiennaleBold.otf", size=size_text),
                           fill=(255, 255, 255, 255))
 
