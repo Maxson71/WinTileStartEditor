@@ -1,6 +1,8 @@
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from customtkinter import *
 from customtkinter import filedialog as fd
+from CTkColorPicker import *
 
 
 class WinTileStartEditor:
@@ -8,16 +10,19 @@ class WinTileStartEditor:
         self.root = CTk()
         self.root.geometry("740x500")
         self.root.minsize(740,500)
+
+        self.glow_color = (255, 255, 255)
         self.image = None
+
         self.root.grid_columnconfigure(1, weight=1)
-        self.root.grid_rowconfigure((0, 1, 2), weight=1)
+        self.root.grid_columnconfigure(0, minsize=220)
+        self.root.grid_rowconfigure(0, weight=1)
+
         self.init()
 
     def init(self):
         self.root.title("WinTileStartEditor")
         self.root.iconbitmap("resources/icon.ico")
-
-        self.root.bind("<Escape>", self.__close)
 
     def run(self):
         self.draw_widgets()
@@ -27,15 +32,20 @@ class WinTileStartEditor:
     def draw_widgets(self):
 
         self.sidebar_frame = CTkFrame(self.root, width=220, corner_radius=0)
-        self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(10, weight=1)
+        self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
+        self.sidebar_frame.grid_rowconfigure(10)
 
         self.logo_label = CTkLabel(self.sidebar_frame, text="WinTileStartEditor",
                                                  font=CTkFont("<Biennale>", size=20, weight="bold"))
-        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 5))
+        self.logo_label.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+
+        self.style_segmented_button = CTkSegmentedButton(self.sidebar_frame, command=self.segmented_button_event)
+        self.style_segmented_button.grid(row=1, column=0, padx=10, pady=5, sticky="ew")
+        self.style_segmented_button.configure(values=["Win10", "Win11"])
+        self.style_segmented_button.set("Win10")
 
         self.button_frame = CTkFrame(self.sidebar_frame, fg_color="transparent")
-        self.button_frame.grid(row=1, column=0, padx=20, pady=10)
+        self.button_frame.grid(row=2, column=0, padx=10, pady=5)
 
         self.open_image_buttom = CTkButton(self.button_frame, text="Open", command=self.open_image, width = 80)
         self.open_image_buttom.grid(row=0, column=0, padx=10, pady=5)
@@ -43,42 +53,58 @@ class WinTileStartEditor:
         self.save_image_buttom = CTkButton(self.button_frame, text="Save", command=self.save_image, width = 80)
         self.save_image_buttom.grid(row=0, column=1, padx=10, pady=5)
 
-        self.style_segmented_button = CTkSegmentedButton(self.sidebar_frame, command=self.segmented_button_event)
-        self.style_segmented_button.grid(row=2, column=0, padx=(10, 10), pady=(10, 10), sticky="ew")
-        self.style_segmented_button.configure(values=["Win10", "Win11"])
-        self.style_segmented_button.set("Win10")
-
         self.radius_label = CTkLabel(self.sidebar_frame, text="Radius: 0")
         self.radius_label.grid(row=3, column=0, padx=20, pady=1)
 
-        self.radius_slider = CTkSlider(self.sidebar_frame, from_=0, to=100, command=self.slider_radius_event)
+        self.radius_slider = CTkSlider(self.sidebar_frame, from_=0, to=100, border_width=3 , command=self.slider_radius_event)
         self.radius_slider.set(0)
         self.radius_slider.grid(row=4, column=0, padx=20, pady=5)
 
-        self.textbox = CTkTextbox(self.sidebar_frame, activate_scrollbars=False, height=45)
-        self.textbox.grid(row=5, column=0, padx=20, pady=10)
-        self.textbox.bind("<KeyRelease>", self.text_changed)  # Прив'язка функції до події введення тексту
+        self.text_entry = CTkEntry(self.sidebar_frame, height=30)
+        self.text_entry.grid(row=5, column=0, padx=20, pady=5, sticky="nsew")
+        self.text_entry.bind("<KeyRelease>", self.text_changed)
 
         self.size_text_label = CTkLabel(self.sidebar_frame, text="Size text: 150")
-        self.size_text_label.grid(row=6, column=0, padx=20, pady=1)
+        self.size_text_label.grid(row=6, column=0, padx=10, pady=1)
 
-        self.size_text_slider = CTkSlider(self.sidebar_frame, from_=50, to=250, command=self.slider_size_text_event)
+        self.size_text_slider = CTkSlider(self.sidebar_frame, from_=50, to=250, border_width=3, command=self.slider_size_text_event)
         self.size_text_slider.set(150)
-        self.size_text_slider.grid(row=7, column=0, padx=20, pady=5)
+        self.size_text_slider.grid(row=7, column=0, padx=20, pady=1)
 
-        self.double_text_var = IntVar(value=0)
-        self.double_text_check = CTkCheckBox(self.sidebar_frame, text="Double text", command=self.double_text_changed,
-                               variable=self.double_text_var, onvalue=60, offvalue=0, checkbox_width = 20, checkbox_height = 20)
-        self.double_text_check.grid(row=8, column=0, padx=10, pady=5)
+        self.glow_var = IntVar(value=0)
+        self.glow_check = CTkCheckBox(self.sidebar_frame, text="Double text", command=self.glow_check_changed,
+                                      variable=self.glow_var, onvalue=1, offvalue=0, checkbox_width = 20, checkbox_height = 20)
+        self.glow_check.grid(row=8, column=0, padx=10, pady=10)
 
+        self.glow_color_label = CTkLabel(self.sidebar_frame, text="Glow_1 Color:")
+        self.glow_color_label.grid(row=9, column=0, padx=10, pady=5)
+
+        self.glow_color_picker = CTkColorPicker(self.sidebar_frame, command=self.glow_color_changed)
+        self.glow_color_picker.grid(row=10, column=0, padx=10, pady=5)
 
         self.image_label = CTkLabel(self.root, image=self.image, text="")
         self.image_label.grid(row=0, column=1, rowspan=4, sticky="nsew")
 
-    def double_text_changed(self):
+
+    def glow_color_changed(self, color):
+        self.glow_color = tuple(int(color.replace("#", "", 1)[i:i + 2], 16) for i in (0, 2, 4))
+
+        self.create_grow_rounded_image()
+        self.create_text_rounded_image()
+        self.create_final_rounded_image()
+        self.display_image()
+
+    def glow_check_changed(self):
+
+        self.create_grow_rounded_image()
+        self.create_text_rounded_image()
+        self.create_final_rounded_image()
         self.display_image()
 
     def text_changed(self, event):
+
+        self.create_text_rounded_image()
+        self.create_final_rounded_image()
         self.display_image()
 
     def segmented_button_event(self, value):
@@ -88,76 +114,117 @@ class WinTileStartEditor:
         else:
             self.radius_slider.set(50)
             self.slider_radius_event(50)
-        self.size_text_slider.set(150)
-        self.slider_size_text_event(150)
 
     def slider_size_text_event(self, value):
         self.size_text_label.configure(text=f"Size text: {int(value)}")
+
+        self.create_text_rounded_image()
+        self.create_final_rounded_image()
         self.display_image()
 
     def slider_radius_event(self, value):
         self.radius_label.configure(text=f"Radius: {int(value)}")
+
+        self.create_final_rounded_image()
         self.display_image()
 
+    def create_rounded_image(self):
+        if self.image is not None:
+            width, height = self.image.size
+            self.rounded_image = Image.new('RGBA', (width, height))
+            self.rounded_image.paste(self.image, (0, 0), self.image)
+
+    def create_grow_rounded_image(self):
+        if self.image is not None:
+            width, height = self.image.size
+            self.grow_rounded_image = Image.new('RGBA', (width, height))
+            self.grow_rounded_image.paste(self.rounded_image, (0, 0), self.image)
+            width, height = self.image.size
+            glow_image = Image.open("resources/glow/glow_1.png").convert("RGBA").resize((width, height))
+            glow_image = self.change_glow_color(glow_image)
+            self.grow_rounded_image.paste(glow_image, (0, 0), glow_image)
+
+    def change_glow_color(self, image):
+        data = np.array(image)
+        color = self.glow_color
+        red, green, blue, alpha = data[:, :, 0], data[:, :, 1], data[:, :, 2], data[:, :, 3]
+        red[color != 0] = color[0]
+        green[color != 0] = color[1]
+        blue[color != 0] = color[2]
+        return Image.fromarray(np.stack((red, green, blue, alpha), axis=-1), 'RGBA')
+
+    def create_text_rounded_image(self):
+        if self.image is not None:
+            width, height = self.image.size
+            size_text = int(self.size_text_slider.get())
+
+            self.text_rounded_image = Image.new('RGBA', (width, height))
+            self.text_rounded_image.paste(self.grow_rounded_image, (0, 0), self.image)
+
+            rounded_image_with_text = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(rounded_image_with_text)
+            text = self.text_entry.get()
+
+            font = ImageFont.truetype("resources/fonts/BiennaleBold.otf", size=size_text)
+
+            draw.text((50, height - 60), text, font=font, fill=(255, 255, 255, 255), anchor="ls")
+
+            self.text_rounded_image.paste(rounded_image_with_text, (0, 0), rounded_image_with_text)
+
+    def create_final_rounded_image(self):
+        if self.image is not None:
+            width, height = self.image.size
+            mask = self.create_mask()
+            self.rounded_image_final = Image.new('RGBA', (width, height))
+            self.rounded_image_final.paste(self.text_rounded_image, mask=mask)
+
+    def create_mask(self):
+        radius = int(self.radius_slider.get())
+        width, height = self.image.size
+        mask = Image.new('L', (width, height), 0)
+        draw = ImageDraw.Draw(mask)
+
+        draw.rectangle((0, radius, width, height - radius), fill=255)
+        draw.rectangle((radius, 0, width - radius, height), fill=255)
+
+        draw.ellipse((0, 0, radius * 2, radius * 2), fill=255)
+        draw.ellipse((0, height - (radius * 2) - 1, (radius * 2), height - 1), fill=255)
+        draw.ellipse((width - (radius * 2) - 1, 0, width - 1, (radius * 2)), fill=255)
+        draw.ellipse((width - (radius * 2) - 1, height - (radius * 2) - 1, width - 1, height - 1), fill=255)
+
+        return mask
+
     def display_image(self):
-        if hasattr(self, 'image'):
-            if self.image is not None:
-                radius = int(self.radius_slider.get())
-                size_text = int(self.size_text_slider.get())
+        if self.image is not None:
+            ctk_image = self.convert_to_ctk_image(self.rounded_image_final)
+            self.image_label.configure(image=ctk_image)
+            self.image_label.image = ctk_image
 
-                width, height = self.image.size
+    def convert_to_ctk_image(self, pil_image):
 
-                mask = Image.new('L', (width, height), 0)
-                draw = ImageDraw.Draw(mask)
-
-                draw.rectangle((0, radius, width, height - radius), fill=255)
-                draw.rectangle((radius, 0, width - radius, height), fill=255)
-
-                draw.ellipse((0, 0, radius*2, radius*2), fill=255)
-                draw.ellipse((0, height - (radius*2)-1, (radius*2), height-1), fill=255)
-                draw.ellipse((width - (radius*2)-1, 0, width-1, (radius*2)), fill=255)
-                draw.ellipse((width - (radius*2)-1, height - (radius*2)-1, width-1, height-1), fill=255)
-
-                self.rounded_image = Image.new('RGBA', (width, height))
-                self.rounded_image.paste(self.image, mask=mask)
-
-                rounded_image_with_text = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-                draw = ImageDraw.Draw(rounded_image_with_text)
-                text = str(self.textbox.get("1.0", "end-1c"))
-
-                draw.text((60, height - size_text - self.double_text_var.get() - 60), text,
-                          font=ImageFont.truetype("resources/fonts/BiennaleBold.otf", size=size_text),
-                          fill=(255, 255, 255, 255))
-
-                self.rounded_image.paste(rounded_image_with_text, (0, 0), rounded_image_with_text)
-
-                # Відобразити зображення на етикетці
-                ctk_image = self.convert_to_ctk_image(self.rounded_image, width, height)
-                self.image_label.configure(image=ctk_image)
-                self.image_label.image = ctk_image
-
-    def convert_to_ctk_image(self, pil_image, width, height):
-
+        width, height = self.image.size
         if width >= height:
             ctk_image = CTkImage(pil_image, size=(450, 450//(width/height)))
         else:
             ctk_image = CTkImage(pil_image, size=(450//(height/width), 450))
         return ctk_image
 
-
     def open_image(self):
         image_path = fd.askopenfilenames(filetypes=(("Images", "*.jpeg;*.jpg;*.png"),))
         if image_path:
             self.image = Image.open(image_path[0])
+
+            self.create_rounded_image()
+            self.create_grow_rounded_image()
+            self.create_text_rounded_image()
+            self.create_final_rounded_image()
             self.display_image()
 
     def save_image(self):
         if self.image is not None:
             save_path = fd.asksaveasfilename(defaultextension=".png", filetypes=(("Images", "*.png"),))
             if save_path:
-                self.rounded_image.save(save_path, format="PNG")
-
-
+                self.rounded_image_final.save(save_path, format="PNG")
 
     def __close(self, event):
         self.root.quit()
