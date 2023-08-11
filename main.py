@@ -71,41 +71,50 @@ class WinTileStartEditor:
         self.size_text_slider.set(150)
         self.size_text_slider.grid(row=7, column=0, padx=20, pady=1)
 
-        self.glow_var = IntVar(value=0)
-        self.glow_check = CTkCheckBox(self.sidebar_frame, text="Double text", command=self.glow_check_changed,
-                                      variable=self.glow_var, onvalue=1, offvalue=0, checkbox_width = 20, checkbox_height = 20)
-        self.glow_check.grid(row=8, column=0, padx=10, pady=10)
+        self.double_text_var = IntVar(value=0)
+        self.double_text_check = CTkCheckBox(self.sidebar_frame, text="Double text",
+                                      variable=self.double_text_var, onvalue=1, offvalue=0, checkbox_width = 20, checkbox_height = 20)
+        self.double_text_check.grid(row=8, column=0, padx=10, pady=10)
 
-        self.glow_color_label = CTkLabel(self.sidebar_frame, text="Glow_1 Color:")
-        self.glow_color_label.grid(row=9, column=0, padx=10, pady=5)
+        self.choose_glow_color_frame = CTkFrame(self.sidebar_frame, fg_color="transparent")
+        self.choose_glow_color_frame.grid(row=9, column=0, padx=10, pady=5)
 
-        self.glow_color_picker = CTkColorPicker(self.sidebar_frame, command=self.glow_color_changed)
-        self.glow_color_picker.grid(row=10, column=0, padx=10, pady=5)
+        self.check_glow_var = BooleanVar(value=False)
+        self.choose_glow_color_check = CTkCheckBox(self.choose_glow_color_frame, text="Add glow", command=self.glow_check_changed,
+                                                   variable=self.check_glow_var, onvalue=True, offvalue=False,
+                                                   checkbox_width = 20, checkbox_height = 20)
+        self.choose_glow_color_check.grid(row=0, column=0, padx=10, pady=5)
+
+        self.choose_glow_color_button = CTkButton(self.choose_glow_color_frame, text="", fg_color="white",hover_color="white",
+                                                  command=self.ask_color, state="disabled", width = 30, height = 30)
+        self.choose_glow_color_button.grid(row=0, column=1, padx=10, pady=5)
 
         self.image_label = CTkLabel(self.root, image=self.image, text="")
         self.image_label.grid(row=0, column=1, rowspan=4, sticky="nsew")
 
+    def glow_check_changed(self):
+        if self.check_glow_var.get():
+            self.choose_glow_color_button.configure(state="normal")
+        else:
+            self.choose_glow_color_button.configure(state="disabled")
+        if self.image is not None:
+            self.create_grow_rounded_image()
+
+    def ask_color(self):
+        pick_color = AskColor()
+        color = pick_color.get()
+        if color is not None:
+            self.glow_color_changed(color)
+            self.choose_glow_color_button.configure(fg_color=color)
 
     def glow_color_changed(self, color):
         self.glow_color = tuple(int(color.replace("#", "", 1)[i:i + 2], 16) for i in (0, 2, 4))
-
-        self.create_grow_rounded_image()
-        self.create_text_rounded_image()
-        self.create_final_rounded_image()
-        self.display_image()
-
-    def glow_check_changed(self):
-
-        self.create_grow_rounded_image()
-        self.create_text_rounded_image()
-        self.create_final_rounded_image()
-        self.display_image()
+        if self.image is not None:
+            self.create_grow_rounded_image()
 
     def text_changed(self, event):
-
-        self.create_text_rounded_image()
-        self.create_final_rounded_image()
-        self.display_image()
+        if self.image is not None:
+            self.create_text_rounded_image()
 
     def segmented_button_event(self, value):
         if value == "Win10":
@@ -117,32 +126,31 @@ class WinTileStartEditor:
 
     def slider_size_text_event(self, value):
         self.size_text_label.configure(text=f"Size text: {int(value)}")
-
-        self.create_text_rounded_image()
-        self.create_final_rounded_image()
-        self.display_image()
+        if self.image is not None:
+            self.create_text_rounded_image()
 
     def slider_radius_event(self, value):
         self.radius_label.configure(text=f"Radius: {int(value)}")
-
-        self.create_final_rounded_image()
-        self.display_image()
+        if self.image is not None:
+            self.create_final_rounded_image()
 
     def create_rounded_image(self):
-        if self.image is not None:
-            width, height = self.image.size
-            self.rounded_image = Image.new('RGBA', (width, height))
-            self.rounded_image.paste(self.image, (0, 0), self.image)
+        width, height = self.image.size
+        self.rounded_image = Image.new('RGBA', (width, height))
+        self.rounded_image.paste(self.image, (0, 0), self.image)
+
+        self.create_grow_rounded_image()
 
     def create_grow_rounded_image(self):
-        if self.image is not None:
-            width, height = self.image.size
-            self.grow_rounded_image = Image.new('RGBA', (width, height))
-            self.grow_rounded_image.paste(self.rounded_image, (0, 0), self.image)
-            width, height = self.image.size
+        width, height = self.image.size
+        self.grow_rounded_image = Image.new('RGBA', (width, height))
+        self.grow_rounded_image.paste(self.rounded_image, (0, 0))
+        if self.check_glow_var.get():
             glow_image = Image.open("resources/glow/glow_1.png").convert("RGBA").resize((width, height))
             glow_image = self.change_glow_color(glow_image)
             self.grow_rounded_image.paste(glow_image, (0, 0), glow_image)
+
+        self.create_text_rounded_image()
 
     def change_glow_color(self, image):
         data = np.array(image)
@@ -154,29 +162,40 @@ class WinTileStartEditor:
         return Image.fromarray(np.stack((red, green, blue, alpha), axis=-1), 'RGBA')
 
     def create_text_rounded_image(self):
-        if self.image is not None:
-            width, height = self.image.size
-            size_text = int(self.size_text_slider.get())
+        width, height = self.image.size
+        size_text = int(self.size_text_slider.get())
 
-            self.text_rounded_image = Image.new('RGBA', (width, height))
-            self.text_rounded_image.paste(self.grow_rounded_image, (0, 0), self.image)
+        self.text_rounded_image = Image.new('RGBA', (width, height))
+        self.text_rounded_image.paste(self.grow_rounded_image, (0, 0), self.grow_rounded_image)
 
-            rounded_image_with_text = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-            draw = ImageDraw.Draw(rounded_image_with_text)
-            text = self.text_entry.get()
+        rounded_image_with_text = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(rounded_image_with_text)
+        text = self.text_entry.get()
 
-            font = ImageFont.truetype("resources/fonts/BiennaleBold.otf", size=size_text)
+        font = ImageFont.truetype("resources/fonts/BiennaleBold.otf", size=size_text)
+        draw.text((50, height - 60), text, font=font, fill=(255, 255, 255, 255), anchor="ls")
+        self.text_rounded_image.paste(rounded_image_with_text, (0, 0), rounded_image_with_text)
 
-            draw.text((50, height - 60), text, font=font, fill=(255, 255, 255, 255), anchor="ls")
+        self.create_icon_rounded_image()
 
-            self.text_rounded_image.paste(rounded_image_with_text, (0, 0), rounded_image_with_text)
+    def create_icon_rounded_image(self):
+        width, height = self.image.size
+        self.icon_rounded_image = Image.new('RGBA', (width, height))
+        self.icon_rounded_image.paste(self.text_rounded_image, (0, 0), self.text_rounded_image)
+        glow2_image = Image.open("resources/glow/glow_2.png").resize((width, height))
+        self.icon_rounded_image.paste(self.text_rounded_image, (0, 0), self.text_rounded_image)
+        self.icon_rounded_image.paste(glow2_image, (0, 0), glow2_image)
+
+        self.create_final_rounded_image()
+
 
     def create_final_rounded_image(self):
-        if self.image is not None:
             width, height = self.image.size
             mask = self.create_mask()
             self.rounded_image_final = Image.new('RGBA', (width, height))
-            self.rounded_image_final.paste(self.text_rounded_image, mask=mask)
+            self.rounded_image_final.paste(self.icon_rounded_image, mask=mask)
+
+            self.display_image()
 
     def create_mask(self):
         radius = int(self.radius_slider.get())
@@ -195,10 +214,9 @@ class WinTileStartEditor:
         return mask
 
     def display_image(self):
-        if self.image is not None:
-            ctk_image = self.convert_to_ctk_image(self.rounded_image_final)
-            self.image_label.configure(image=ctk_image)
-            self.image_label.image = ctk_image
+        ctk_image = self.convert_to_ctk_image(self.rounded_image_final)
+        self.image_label.configure(image=ctk_image)
+        self.image_label.image = ctk_image
 
     def convert_to_ctk_image(self, pil_image):
 
@@ -213,12 +231,8 @@ class WinTileStartEditor:
         image_path = fd.askopenfilenames(filetypes=(("Images", "*.jpeg;*.jpg;*.png"),))
         if image_path:
             self.image = Image.open(image_path[0])
-
-            self.create_rounded_image()
-            self.create_grow_rounded_image()
-            self.create_text_rounded_image()
-            self.create_final_rounded_image()
-            self.display_image()
+            if self.image is not None:
+                self.create_rounded_image()
 
     def save_image(self):
         if self.image is not None:
